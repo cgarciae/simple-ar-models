@@ -99,7 +99,7 @@ from rich.table import Table
 import rich
 
 print("\n\n")
-columns = ["a", "b", "a|b", "a&b", "a^b"]
+columns = ["a", "b", "a&b", "a|b", "a^b"]
 
 for i in range(2, 6):
     table = Table(title=f"Step {i-2}")
