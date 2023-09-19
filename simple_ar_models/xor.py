@@ -1,4 +1,4 @@
-# %%
+from functools import partial
 from flax.experimental import nnx
 import jax.numpy as jnp
 import jax
@@ -72,9 +72,13 @@ def test_step(
     return loss, accuracy
 
 
-@jax.jit
-def sample(state: nnx.TrainState[AR], output: jax.Array) -> jax.Array:
+@partial(jax.jit, static_argnames=["debug"])
+def sample(
+    state: nnx.TrainState[AR], output: jax.Array, *, debug: bool = False
+) -> jax.Array:
     for i in range(1, 4):
+        if debug:
+            jax.debug.print("\n{output}", output=output[:, : i + 1])
         logits, _ = state.apply("params")(output[:, :-1])
         tokens = jnp.argmax(logits[:, i], axis=-1)
         output = output.at[:, i + 1].set(tokens)
@@ -82,7 +86,6 @@ def sample(state: nnx.TrainState[AR], output: jax.Array) -> jax.Array:
     return output
 
 
-# %%
 train_steps = 1_500
 test_steps = 100
 
@@ -94,9 +97,6 @@ for i in range(train_steps + 1):
 
 model.update_state(state.params)
 
-# %%
-preds = sample(state, X.at[:, 2:].set(0))
-print(preds)
 
-
-# %%
+output = sample(state, X.at[:, 2:].set(0), debug=True)
+print(f"\n{output}\n")
