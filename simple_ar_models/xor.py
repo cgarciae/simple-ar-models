@@ -1,4 +1,3 @@
-from functools import partial
 from flax.experimental import nnx
 import jax.numpy as jnp
 import jax
@@ -72,13 +71,9 @@ def test_step(
     return loss, accuracy
 
 
-@partial(jax.jit, static_argnames=["debug"])
-def sample(
-    state: nnx.TrainState[AR], output: jax.Array, *, debug: bool = False
-) -> jax.Array:
+@jax.jit
+def sample(state: nnx.TrainState[AR], output: jax.Array) -> jax.Array:
     for i in range(1, 4):
-        if debug:
-            jax.debug.print("\n{output}", output=output[:, : i + 1])
         logits, _ = state.apply("params")(output[:, :-1])
         tokens = jnp.argmax(logits[:, i], axis=-1)
         output = output.at[:, i + 1].set(tokens)
@@ -98,5 +93,22 @@ for i in range(train_steps + 1):
 model.update_state(state.params)
 
 
-output = sample(state, X.at[:, 2:].set(0), debug=True)
-print(f"\n{output}\n")
+output = sample(state, X.at[:, 2:].set(0))
+# animation
+from rich.table import Table
+import rich
+
+print("\n\n")
+columns = ["a", "b", "a|b", "a&b", "a^b"]
+
+for i in range(2, 6):
+    table = Table(title=f"Step {i-2}")
+    for col in columns[:i]:
+        table.add_column(col)
+
+    for row in output:
+        table.add_row(*[str(x) for x in row[:i]])
+
+    rich.print(table)
+
+print("\n\n")
